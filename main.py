@@ -9,7 +9,7 @@ REGION = "eu"
 
 @app.route("/")
 def home():
-    return "✅ Sharp Over/Under Odds App Running!"
+    return "✅ Value Betting App is Running! <br> Go to <a href='/totals'>/totals</a> to see Over/Under odds."
 
 @app.route("/totals")
 def totals():
