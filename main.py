@@ -1,21 +1,19 @@
 from flask import Flask, render_template_string
-import requests
-import os
+import requests, os
 
 app = Flask(__name__)
 
 API_KEY = os.getenv("ODDS_API_KEY", "5294b7f0280bf731a841f498dd9e2907")
-SPORT = "soccer_epl"  # Premier League
+SPORT = "soccer_epl"   # Can change to basketball_nba
 REGION = "eu"
-BOOKMAKERS = ["pinnacle", "1xbet"]
 
 @app.route("/")
 def home():
-    return "✅ Value Betting App is Running!"
+    return "✅ Sharp Over/Under Odds App Running!"
 
-@app.route("/valuebets")
-def valuebets():
-    url = f"https://api.the-odds-api.com/v4/sports/{SPORT}/odds?regions={REGION}&markets=h2h&oddsFormat=decimal&apiKey={API_KEY}"
+@app.route("/totals")
+def totals():
+    url = f"https://api.the-odds-api.com/v4/sports/{SPORT}/odds?regions={REGION}&markets=totals&oddsFormat=decimal&apiKey={API_KEY}"
     
     try:
         response = requests.get(url)
@@ -23,42 +21,39 @@ def valuebets():
     except Exception as e:
         return f"<h3>⚠️ API Error: {str(e)}</h3>"
 
+    # If API error
     if isinstance(data, dict) and "error" in data:
-        return f"<h3>⚠️ API Error: {data['error']}</h3>"
+        return f"<h3>⚠️ API Error: {data['error']}</h3><br>Raw: {data}"
+
+    if not isinstance(data, list) or len(data) == 0:
+        return "<h3>⚠️ No matches found (maybe API limit reached?)</h3>"
 
     rows = []
     for match in data:
-        teams = " vs ".join(match["teams"])
-        commence_time = match["commence_time"]
-        league = match["sport_title"]
+        teams = " vs ".join(match.get("teams", ["Unknown", "Unknown"]))
+        league = match.get("sport_title", "Unknown League")
+        start_time = match.get("commence_time", "N/A")
 
-        # Extract Pinnacle & 1XBet odds
-        pinnacle_odds = "-"
-        x1bet_odds = "-"
-        for bookmaker in match["bookmakers"]:
-            if bookmaker["key"] == "pinnacle":
-                pinnacle_odds = bookmaker["markets"][0]["outcomes"]
-            elif bookmaker["key"] == "1xbet":
-                x1bet_odds = bookmaker["markets"][0]["outcomes"]
-
-        # Format nicely (just showing first team odds for now)
-        pin_val = pinnacle_odds[0]["price"] if pinnacle_odds != "-" else "-"
-        x1_val = x1bet_odds[0]["price"] if x1bet_odds != "-" else "-"
+        # Find Pinnacle totals market
+        pinnacle_totals = "-"
+        for bookmaker in match.get("bookmakers", []):
+            if bookmaker.get("key") == "pinnacle":
+                outcomes = bookmaker["markets"][0]["outcomes"]
+                pinnacle_totals = ", ".join([f"{o['name']} {o['point']} @ {o['price']}" for o in outcomes])
 
         rows.append(f"""
             <tr>
                 <td>{teams}</td>
                 <td>{league}</td>
-                <td>{pin_val}</td>
-                <td>{x1_val}</td>
-                <td>{commence_time}</td>
+                <td>{pinnacle_totals}</td>
+                <td>{start_time}</td>
             </tr>
         """)
 
     table_html = f"""
     <html>
         <head>
-            <title>Value Bets</title>
+            <title>Over/Under Odds</title>
             <style>
                 body {{ font-family: Arial, sans-serif; }}
                 table {{ width: 100%; border-collapse: collapse; }}
@@ -67,14 +62,13 @@ def valuebets():
             </style>
         </head>
         <body>
-            <h2>📊 Pinnacle vs 1XBet Odds</h2>
+            <h2>📊 Pinnacle Over/Under Odds ({SPORT})</h2>
             <table>
                 <thead>
                     <tr>
                         <th>Match</th>
                         <th>League</th>
-                        <th>Pinnacle</th>
-                        <th>1XBet</th>
+                        <th>Over/Under (Pinnacle)</th>
                         <th>Start Time</th>
                     </tr>
                 </thead>
