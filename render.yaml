@@ -1,0 +1,15 @@
+services:
+  - type: worker
+    name: valuebet-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: ODDS_API_KEY
+        value: 5294b7f0280bf731a841f498dd9e2907
+      - key: TELEGRAM_BOT_TOKEN
+        value: 7895372454:AAFoIm490XAskKKsSmGm6KOWMHGp1g_PBbA
+      - key: TELEGRAM_CHAT_ID
+        value: "6564747718"
+        
